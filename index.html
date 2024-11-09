@@ -33,6 +33,7 @@
             overflow-y: scroll;
             padding: 10px;
             background-color: #e6e6e6;
+            text-align: left;
         }
         #messageInputSection {
             display: flex;
@@ -42,6 +43,7 @@
         #usernameInput, #messageInput {
             padding: 10px;
             margin-right: 10px;
+            width: 80%;
         }
     </style>
 </head>
@@ -64,7 +66,7 @@
         function setUsername() {
             username = document.getElementById("usernameInput").value.trim();
             if (username) {
-                fetch(`/setUsername`, {
+                fetch('/setUsername', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username })
@@ -78,7 +80,8 @@
                     } else {
                         alert("Username is taken. Try another one.");
                     }
-                });
+                })
+                .catch(error => console.error("Error:", error));
             }
         }
 
@@ -94,25 +97,28 @@
                         messagesDiv.appendChild(messageElement);
                     });
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                });
+                })
+                .catch(error => console.error("Error loading messages:", error));
         }
 
         function sendMessage() {
             const messageInput = document.getElementById("messageInput");
             const message = messageInput.value.trim();
             if (message) {
-                fetch(`/sendMessage`, {
+                fetch('/sendMessage', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, message })
-                }).then(() => {
+                })
+                .then(() => {
                     messageInput.value = "";
                     loadMessages();
-                });
+                })
+                .catch(error => console.error("Error sending message:", error));
             }
         }
 
-        // Load messages every 3 seconds
+        // Auto-refresh messages every 3 seconds
         setInterval(loadMessages, 3000);
     </script>
 </body>
