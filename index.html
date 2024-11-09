@@ -2,51 +2,118 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Public Chatroom</title>
+    <title>Retro Chatroom</title>
     <style>
-        body { font-family: Arial, sans-serif; display: flex; flex-direction: column; align-items: center; }
-        #chatbox { width: 80%; max-width: 600px; height: 400px; border: 1px solid #ccc; overflow-y: scroll; margin-top: 20px; padding: 10px; }
-        #inputSection { display: flex; margin-top: 10px; width: 80%; max-width: 600px; }
-        #messageInput { flex: 1; padding: 10px; }
-        #sendButton { padding: 10px; }
+        /* Frutiger Aero early 2000s style */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #c0e6f0;
+            color: #333;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        #chatroom {
+            margin: auto;
+            width: 80%;
+            max-width: 600px;
+            background-color: #f2f2f2;
+            border: 1px solid #333;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+            padding: 20px;
+        }
+        #usernamePrompt {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        #messages {
+            border: 1px solid #999;
+            height: 300px;
+            overflow-y: scroll;
+            padding: 10px;
+            background-color: #e6e6e6;
+        }
+        #messageInputSection {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        #usernameInput, #messageInput {
+            padding: 10px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
-    <h1>Public Chatroom</h1>
-    <div id="chatbox"></div>
-    <div id="inputSection">
-        <input type="text" id="messageInput" placeholder="Type your message...">
-        <button id="sendButton">Send</button>
+    <div id="chatroom">
+        <h1>Welcome to the Retro Chatroom</h1>
+        <div id="usernamePrompt">
+            <input type="text" id="usernameInput" placeholder="Enter your username" required>
+            <button onclick="setUsername()">Join Chat</button>
+        </div>
+        <div id="messages"></div>
+        <div id="messageInputSection" style="display: none;">
+            <input type="text" id="messageInput" placeholder="Type a message...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
     </div>
     <script>
-        // Mock chat functionality
-        const chatbox = document.getElementById("chatbox");
-        const messageInput = document.getElementById("messageInput");
-        const sendButton = document.getElementById("sendButton");
+        let username = null;
 
-        // Function to add message to the chatbox
-        function addMessage(message) {
-            const messageDiv = document.createElement("div");
-            messageDiv.textContent = message;
-            chatbox.appendChild(messageDiv);
-            chatbox.scrollTop = chatbox.scrollHeight; // Auto-scroll to latest message
+        function setUsername() {
+            username = document.getElementById("usernameInput").value.trim();
+            if (username) {
+                fetch(`/setUsername`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById("usernamePrompt").style.display = 'none';
+                        document.getElementById("messageInputSection").style.display = 'flex';
+                        loadMessages();
+                    } else {
+                        alert("Username is taken. Try another one.");
+                    }
+                });
+            }
         }
 
-        // Send button click event
-        sendButton.addEventListener("click", () => {
-            const message = messageInput.value;
-            if (message.trim() !== "") {
-                addMessage("You: " + message);
-                messageInput.value = ""; // Clear input
-                // In a real setup, you would send this message to a server here
-            }
-        });
+        function loadMessages() {
+            fetch('/messages')
+                .then(response => response.json())
+                .then(data => {
+                    const messagesDiv = document.getElementById("messages");
+                    messagesDiv.innerHTML = "";
+                    data.messages.forEach(message => {
+                        const messageElement = document.createElement("div");
+                        messageElement.textContent = `${message.username}: ${message.text}`;
+                        messagesDiv.appendChild(messageElement);
+                    });
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                });
+        }
 
-        // Simulate receiving messages (for demonstration)
-        setInterval(() => {
-            addMessage("User" + Math.floor(Math.random() * 100) + ": Hello everyone!");
-        }, 5000);
+        function sendMessage() {
+            const messageInput = document.getElementById("messageInput");
+            const message = messageInput.value.trim();
+            if (message) {
+                fetch(`/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, message })
+                }).then(() => {
+                    messageInput.value = "";
+                    loadMessages();
+                });
+            }
+        }
+
+        // Load messages every 3 seconds
+        setInterval(loadMessages, 3000);
     </script>
 </body>
 </html>
