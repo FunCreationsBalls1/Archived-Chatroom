@@ -44,6 +44,11 @@ app.post('/sendMessage', (req, res) => {
     });
 });
 
+// Root route to serve index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // Start the server
 app.listen(port, () => {
     console.log(`Chat server is running at http://localhost:${port}`);
