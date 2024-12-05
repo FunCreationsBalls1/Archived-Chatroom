@@ -37,13 +37,37 @@
         }
         #messageInputSection {
             display: flex;
-            justify-content: center;
+            align-items: center;
             margin-top: 10px;
         }
         #usernameInput, #messageInput {
             padding: 10px;
             margin-right: 10px;
             width: 80%;
+        }
+        #mediaPreview {
+            display: none;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            background-color: #f2f2f2;
+            padding: 10px;
+            border: 1px solid #ccc;
+            max-height: 150px;
+            overflow-y: auto;
+            justify-content: center;
+        }
+        .emoji-preview, .video-preview {
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+        #mediaToggleButton {
+            padding: 10px;
+            cursor: pointer;
+            background-color: #ddd;
+            border: none;
+            border-radius: 5px;
         }
     </style>
 </head>
@@ -57,32 +81,69 @@
         <div id="messages"></div>
         <div id="messageInputSection" style="display: none;">
             <input type="text" id="messageInput" placeholder="Type a message...">
+            <button id="mediaToggleButton" onclick="toggleMediaPreview()">+</button>
             <button onclick="sendMessage()">Send</button>
         </div>
+        <div id="mediaPreview"></div>
     </div>
     <script>
-        let username = null;
+        let sessionToken = localStorage.getItem('sessionToken');
+        let mediaPreviewVisible = false;
+
+        // Auto-login on page load
+        window.onload = () => {
+            if (sessionToken) {
+                authenticateSession();
+            }
+            loadMediaPreview();
+        };
+
+        function authenticateSession() {
+            fetch('/validateSession', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': sessionToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("usernamePrompt").style.display = 'none';
+                    document.getElementById("messageInputSection").style.display = 'flex';
+                    loadMessages();
+                } else {
+                    alert("Session expired. Please log in again.");
+                    localStorage.removeItem('sessionToken');
+                }
+            })
+            .catch(error => console.error("Error authenticating session:", error));
+        }
 
         function setUsername() {
-            username = document.getElementById("usernameInput").value.trim();
-            if (username) {
-                fetch('/setUsername', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById("usernamePrompt").style.display = 'none';
-                        document.getElementById("messageInputSection").style.display = 'flex';
-                        loadMessages();
-                    } else {
-                        alert("Username is taken. Try another one.");
-                    }
-                })
-                .catch(error => console.error("Error:", error));
+            const username = document.getElementById("usernameInput").value.trim();
+            if (!username) {
+                alert("Please enter a valid username.");
+                return;
             }
+            fetch('/setUsername', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    sessionToken = data.token;
+                    localStorage.setItem('sessionToken', sessionToken);
+                    document.getElementById("usernamePrompt").style.display = 'none';
+                    document.getElementById("messageInputSection").style.display = 'flex';
+                    loadMessages();
+                } else {
+                    alert(data.message || "Username is taken. Try another one.");
+                }
+            })
+            .catch(error => console.error("Error setting username:", error));
         }
 
         function loadMessages() {
@@ -90,10 +151,10 @@
                 .then(response => response.json())
                 .then(data => {
                     const messagesDiv = document.getElementById("messages");
-                    messagesDiv.innerHTML = "";
+                    messagesDiv.innerHTML = '';
                     data.messages.forEach(message => {
                         const messageElement = document.createElement("div");
-                        messageElement.textContent = `${message.username}: ${message.text}`;
+                        messageElement.innerHTML = `${message.username}: ${message.text}`; // Render media
                         messagesDiv.appendChild(messageElement);
                     });
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -107,11 +168,14 @@
             if (message) {
                 fetch('/sendMessage', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, message })
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': sessionToken
+                    },
+                    body: JSON.stringify({ message })
                 })
                 .then(() => {
-                    messageInput.value = "";
+                    messageInput.value = '';
                     loadMessages();
                 })
                 .catch(error => console.error("Error sending message:", error));
@@ -120,6 +184,57 @@
 
         // Auto-refresh messages every 3 seconds
         setInterval(loadMessages, 3000);
+
+        // Load emojis and short videos into the preview
+        function loadMediaPreview() {
+            const mediaPreviewDiv = document.getElementById("mediaPreview");
+
+            // Load emojis
+            fetch('/emojis')
+                .then(response => response.json())
+                .then(data => {
+                    data.emojis.forEach(emoji => {
+                        const emojiElement = document.createElement("img");
+                        emojiElement.src = `/emojis/${emoji}`;
+                        emojiElement.alt = emoji;
+                        emojiElement.title = `:${emoji.split('.')[0]}:`;
+                        emojiElement.className = "emoji-preview";
+                        emojiElement.onclick = () => addMediaToInput(`:${emoji.split('.')[0]}:`);
+                        mediaPreviewDiv.appendChild(emojiElement);
+                    });
+                });
+
+            // Load short videos
+            fetch('/sv')
+                .then(response => response.json())
+                .then(data => {
+                    data.sv.forEach(video => {
+                        const videoElement = document.createElement("video");
+                        videoElement.src = `/sv/${video}`;
+                        videoElement.title = `:${video.split('.')[0]}:`;
+                        videoElement.className = "video-preview";
+                        videoElement.muted = true;
+                        videoElement.loop = true;
+                        videoElement.autoplay = true;
+                        videoElement.onclick = () => addMediaToInput(`:${video.split('.')[0]}:`);
+                        mediaPreviewDiv.appendChild(videoElement);
+                    });
+                });
+        }
+
+        // Toggle media preview visibility
+        function toggleMediaPreview() {
+            const mediaPreviewDiv = document.getElementById("mediaPreview");
+            mediaPreviewVisible = !mediaPreviewVisible;
+            mediaPreviewDiv.style.display = mediaPreviewVisible ? "flex" : "none";
+        }
+
+        // Add selected emoji or video tag to the message input
+        function addMediaToInput(mediaTag) {
+            const messageInput = document.getElementById("messageInput");
+            messageInput.value = mediaTag + messageInput.value; // Add at the start
+            messageInput.focus();
+        }
     </script>
 </body>
 </html>
