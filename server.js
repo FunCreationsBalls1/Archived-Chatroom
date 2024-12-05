@@ -100,14 +100,9 @@ app.post('/setUsername', (req, res) => {
     if (!username || username.trim() === "") {
         return res.json({ success: false, message: "Invalid username." });
     }
-    if (!username || username.trim() === "") {
-        return res.json({ success: false, message: "Invalid username." });
-    }
     const token = uuidv4();
     db.run("INSERT INTO users (username) VALUES (?)", [username], (err) => {
         if (err) {
-            // Username is already taken
-            return res.json({ success: false, message: "Username is taken." });
             return res.json({ success: false, message: "Username is taken." });
         }
         db.run("INSERT INTO sessions (username, token) VALUES (?, ?)", [username, token], () => {
@@ -157,11 +152,6 @@ app.post('/sendMessage', (req, res) => {
             res.sendStatus(200);
         });
     });
-});
-
-// Root route to serve index.html
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Start the server
