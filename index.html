@@ -65,24 +65,26 @@
 
         function setUsername() {
             username = document.getElementById("usernameInput").value.trim();
-            if (username) {
-                fetch('/setUsername', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById("usernamePrompt").style.display = 'none';
-                        document.getElementById("messageInputSection").style.display = 'flex';
-                        loadMessages();
-                    } else {
-                        alert("Username is taken. Try another one.");
-                    }
-                })
-                .catch(error => console.error("Error:", error));
+            if (!username) {
+                alert("Please enter a valid username.");
+                return;
             }
+            fetch('/setUsername', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("usernamePrompt").style.display = 'none';
+                    document.getElementById("messageInputSection").style.display = 'flex';
+                    loadMessages();
+                } else {
+                    alert(data.message || "Username is taken. Try another one.");
+                }
+            })
+            .catch(error => console.error("Error:", error));
         }
 
         function loadMessages() {
@@ -90,7 +92,7 @@
                 .then(response => response.json())
                 .then(data => {
                     const messagesDiv = document.getElementById("messages");
-                    messagesDiv.innerHTML = "";
+                    messagesDiv.innerHTML = '';
                     data.messages.forEach(message => {
                         const messageElement = document.createElement("div");
                         messageElement.textContent = `${message.username}: ${message.text}`;
@@ -111,7 +113,7 @@
                     body: JSON.stringify({ username, message })
                 })
                 .then(() => {
-                    messageInput.value = "";
+                    messageInput.value = '';
                     loadMessages();
                 })
                 .catch(error => console.error("Error sending message:", error));
