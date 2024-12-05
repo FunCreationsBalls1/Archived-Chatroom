@@ -18,10 +18,13 @@ db.serialize(() => {
 // Route to set unique username
 app.post('/setUsername', (req, res) => {
     const username = req.body.username;
+    if (!username || username.trim() === "") {
+        return res.json({ success: false, message: "Invalid username." });
+    }
     db.run("INSERT INTO users (username) VALUES (?)", [username], (err) => {
         if (err) {
             // Username is already taken
-            return res.json({ success: false });
+            return res.json({ success: false, message: "Username is taken." });
         }
         res.json({ success: true });
     });
@@ -42,6 +45,11 @@ app.post('/sendMessage', (req, res) => {
         if (err) throw err;
         res.sendStatus(200);
     });
+});
+
+// Root route to serve index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Start the server
